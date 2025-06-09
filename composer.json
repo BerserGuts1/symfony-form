@@ -56,12 +56,12 @@
     },
     "autoload": {
         "psr-4": {
-            "App\\": "src/"
+            "JakubOlkowiczRekrutacjaSmartiveapp\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "App\\Tests\\": "tests/"
+            "JakubOlkowiczRekrutacjaSmartiveapp\\Tests\\": "tests/"
         }
     },
     "replace": {
