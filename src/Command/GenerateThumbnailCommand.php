@@ -11,8 +11,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 
-use JakubOlkowiczRekrutacjaSmartiveapp\Service\ThumbnailGenerator;
 use JakubOlkowiczRekrutacjaSmartiveapp\Storage\StorageFactory;
+use JakubOlkowiczRekrutacjaSmartiveapp\Image\ImageResizerInterface;
 
 #[AsCommand(name: 'thumbnail:generate')]
 class GenerateThumbnailCommand extends Command
@@ -22,8 +22,8 @@ class GenerateThumbnailCommand extends Command
 	private string $filename;
 
 	public function __construct(
-		private readonly ThumbnailGenerator $generator,
-		private readonly StorageFactory $factory
+		private readonly ImageResizerInterface $resizer,
+		private readonly StorageFactory $storageFactory
 	) {
 		parent::__construct();
 	}
@@ -45,8 +45,9 @@ class GenerateThumbnailCommand extends Command
 		$this->sourceQuestion($input, $output);
 
 		try {
-			$storage = $this->factory->create($this->storageType);
-			$this->generator->generate($storage, $this->source, $this->filename);
+			$storage = $this->storageFactory->create($this->storageType);
+			$binary = $this->resizer->resize($this->source);
+			$storage->save($this->filename, $binary);
 			$output->writeln('<info>Miniatura wygenerowana i zapisana.</info>');
 			return Command::SUCCESS;
 		} catch (\Throwable $e) {

@@ -4,5 +4,5 @@ namespace JakubOlkowiczRekrutacjaSmartiveapp\Image;
 
 interface ImageResizerInterface
 {
-    public function resize(string $path, int $maxSize): string;
+    public function resize(string $path): string;
 }

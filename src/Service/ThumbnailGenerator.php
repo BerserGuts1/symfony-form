@@ -13,7 +13,7 @@ class ThumbnailGenerator
 
     public function generate(StorageInterface $storage, string $sourcePath, string $targetFilename): void
     {
-        $binary = $this->resizer->resize($sourcePath, 150);
+        $binary = $this->resizer->resize($sourcePath);
         $storage->save($targetFilename, $binary);
     }
 }
