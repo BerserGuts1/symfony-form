@@ -5,24 +5,15 @@ namespace JakubOlkowiczRekrutacjaSmartiveapp\Command;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Helper\HelperInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\Question;
-use Symfony\Component\Console\Question\ChoiceQuestion;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 use JakubOlkowiczRekrutacjaSmartiveapp\Storage\StorageFactory;
 use JakubOlkowiczRekrutacjaSmartiveapp\Image\ImageResizerInterface;
 
-#[AsCommand(name: "thumbnail:generate")]
+#[AsCommand(name: "thumbnail:generate", description: "Generates a thumbnail and saves it to FTP or locally.")]
 class GenerateThumbnailCommand extends Command
 {
-	private string $storageType;
-	private string $source;
-	private string $filename;
-
 	public function __construct(
 		private readonly ImageResizerInterface $resizer,
 		private readonly StorageFactory $storageFactory
@@ -33,21 +24,25 @@ class GenerateThumbnailCommand extends Command
 	protected function configure(): void
 	{
 		$this
-			->setDescription("Generates a thumbnail and saves it to FTP or locally.");
+			->addArgument("source", InputArgument::REQUIRED, "Path to the source image file")
+			->addArgument("filename", InputArgument::REQUIRED, "Target filename with extension")
+			->addArgument("storage", InputArgument::REQUIRED, "Storage type: ftp or local");
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output): int
 	{
-		$this->titleCommand($output);
-		$this->storageQuestion($input, $output);
-		$this->sourceQuestion($input, $output);
-		$this->filenameQuestion($input, $output);
+		$source = $input->getArgument("source");
+		$filename = $input->getArgument("filename");
+		$storageType = $input->getArgument("storage");
 
 		try {
-			$storage = $this->storageFactory->create($this->storageType);
-			$binary = $this->resizer->resize($this->source);
-			$storage->save($this->filename, $binary);
-			$output->writeln("<info>Thumbnail generated and saved.</info>");
+			$this->validateArguments($source, $filename, $storageType, $output);
+
+			$storage = $this->storageFactory->create($storageType);
+			$binary = $this->resizer->resize($source);
+			$storage->save($filename, $binary);
+
+			$output->writeln("<info>Thumbnail generated and saved successfully.</info>");
 			return Command::SUCCESS;
 		} catch (\Throwable $e) {
 			$output->writeln("<error>Error: " . $e->getMessage() . "</error>");
@@ -55,113 +50,41 @@ class GenerateThumbnailCommand extends Command
 		}
 	}
 
-	private function titleCommand($output)
+	private function validateArguments(string $source, string $filename, string $storage, OutputInterface $output): void
 	{
-		$output->writeln([
-			"<comment>Generator of thumbnail</comment>",
-			"<comment>============</comment>",
-			"",
-		]);
-		sleep(1);
+		if (!file_exists($source) || !is_file($source)) {
+			throw new \InvalidArgumentException("Source file does not exist: {$source}");
+		}
+
+		if (!preg_match("/\.(jpg|jpeg|png|webp)$/i", $source)) {
+			throw new \InvalidArgumentException("Source file must have a valid image extension (.jpg, .jpeg, .png, .webp)");
+		}
+
+		if (str_contains($filename, "/") || str_contains($filename, "\\")) {
+			throw new \InvalidArgumentException("Filename must not contain slashes or paths.");
+		}
+
+		if (!preg_match("/\.(jpg|jpeg|png|webp)$/i", $filename)) {
+			throw new \InvalidArgumentException("Filename must end with .jpg, .jpeg, .png or .webp");
+		}
+
+		if (!in_array($storage, ["ftp", "local"], true)) {
+			throw new \InvalidArgumentException("Storage must be one of: ftp, local");
+		}
+
+		$this->warnIfExtensionMismatch($source, $filename);
 	}
 
-	private function filenameQuestion(InputInterface $input, OutputInterface $output): void
+	private function warnIfExtensionMismatch(string $source, string $filename): void
 	{
-		$helper = $this->getHelper("question");
-
-		$question = new Question("<question>Please enter the final file name:</question> ");
-		$question->setValidator(function ($answer): string {
-			$filename = trim($answer);
-
-			if (!is_string($filename) || $filename === "") {
-				throw new \RuntimeException("The file name must not be empty.");
-			}
-
-			if (str_contains($filename, "/") || str_contains($filename, "\\")) {
-				throw new \RuntimeException("The file name must not contain paths or slashes.");
-			}
-
-			if (!preg_match("/\.(jpg|jpeg|png|webp)$/i", $filename)) {
-				throw new \RuntimeException("File name must end in .jpg, .jpeg, .png or .webp");
-			}
-
-			return $filename;
-		});
-		$question->setMaxAttempts(3);
-
-		$this->filename = $helper->ask($input, $output, $question);
-
-		$this->handleExtensionMismatch($input, $output, $helper);
-
-		$output->writeln(["You have chosen: " . $this->filename, ""]);
-		sleep(1);
-	}
-
-	private function sourceQuestion($input, $output)
-	{
-		$helper = $this->getHelper("question");
-
-		$question = new Question("<question>Specify the path to the source file:</question> ");
-		$question->setValidator(function ($answer): string {
-			$path = trim($answer);
-
-			if (!is_string($path) || $path === "") {
-				throw new \RuntimeException("Source is required and must be a string.");
-			}
-
-			if (!file_exists($path) || !is_file($path)) {
-				throw new \RuntimeException("The source file $path does not exist or is not a file.");
-			}
-
-			if (!preg_match("/\.(jpg|jpeg|png|webp)$/i", $path)) {
-				throw new \RuntimeException("File name must end in .jpg, .jpeg, .png or .webp");
-			}
-
-			return $answer;
-		});
-		$question->setMaxAttempts(3);
-
-		$this->source = $helper->ask($input, $output, $question);
-
-		$output->writeln(["You have chosen: " . $this->source, ""]);
-		sleep(1);
-	}
-
-	private function storageQuestion($input, $output)
-	{
-		$helper = $this->getHelper("question");
-
-		$storage = new ChoiceQuestion(
-			"<question>Select type storage:</question> ",
-			["ftp", "local"],
-			0
-		);
-		$storage->setErrorMessage("Storage %s is invalid.");
-
-		$this->storageType = $helper->ask($input, $output, $storage);
-
-		$output->writeln(["You have just selected: " . $this->storageType, ""]);
-		sleep(1);
-	}
-
-	private function handleExtensionMismatch(InputInterface $input, OutputInterface $output, HelperInterface $helper): void
-	{
-		$sourceExt = strtolower(pathinfo($this->source, PATHINFO_EXTENSION));
-		$targetExt = strtolower(pathinfo($this->filename, PATHINFO_EXTENSION));
+		$sourceExt = strtolower(pathinfo($source, PATHINFO_EXTENSION));
+		$targetExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
 		if ($sourceExt !== $targetExt) {
-			$output->writeln([
-				"<comment>Note:</comment> You change the file extension from <info>{$sourceExt}</info> to <info>{$targetExt}</info>.",""
-			]);
-
-			$confirm = new ConfirmationQuestion(
-				"<question>Are you sure you want to change the file format?</question>. (y/N): ",
-				true
+			throw new \InvalidArgumentException(
+				"Source file has extension .$sourceExt, but target filename ends with .$targetExt — extension must match."
 			);
-
-			if (!$helper->ask($input, $output, $confirm)) {
-				throw new \RuntimeException("The extension change was canceled by the user.");
-			}
 		}
 	}
 }
+
