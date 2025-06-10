@@ -43,9 +43,20 @@ php bin/console thumbnail:generate <source> <filename> <storage>
 ---
 ## Działanie:
 
-Plik źródłowy jest weryfikowany, miniatura jest generowana przez ImageResizerInterface.\
+Plik źródłowy jest weryfikowany, miniatura jest generowana przez pakiet Intervention Image.\
 Wynik zapisywany jest lokalnie lub na FTP. \
 Jeśli plik już istnieje, generowana jest nowa, unikalna nazwa (np. plik-1.jpg)
+
+## Dlaczego Intervention Image?
+Używam pakietu intervention/image jako implementacji ImageResizerInterface. Jest to sprawdzona i popularna biblioteka do manipulacji obrazami w PHP. Oferuje:
+
+- prosty i czytelny API (np. resize()->save())
+
+- wsparcie dla GD i Imagick (działa w różnych środowiskach)
+
+- możliwość manipulacji formatami, jakością i orientacją
+
+- aktywne wsparcie i dobra dokumentacja   
 
 ## Testy:
 
