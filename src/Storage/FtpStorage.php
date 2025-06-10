@@ -2,7 +2,7 @@
 
 namespace JakubOlkowiczRekrutacjaSmartiveapp\Storage;
 
-class FtpStorage implements StorageInterface
+class FtpStorage extends AbstractStorage
 {
     private $fileConflictCommand;
     public function __construct(
@@ -26,7 +26,7 @@ class FtpStorage implements StorageInterface
         $remotePath = $remoteDir . '/' . $uniqueFilename;
 
         $this->uploadFile($connection, $remotePath, $tmpPath);
-
+        unlink($tmpPath);
         ftp_close($connection);
     }
 
@@ -49,16 +49,16 @@ class FtpStorage implements StorageInterface
 
     private function createTempFileWithContents(string $binary): string
     {
-        $tmpFile = tmpfile();
-        if ($tmpFile === false) {
+        $tmpPath = tempnam(sys_get_temp_dir(), 'thumb_');
+        if ($tmpPath === false) {
             throw new StorageException("Failed to create a temporary file.");
         }
 
-        fwrite($tmpFile, $binary);
-        rewind($tmpFile);
+        if (file_put_contents($tmpPath, $binary) === false) {
+            throw new StorageException("Failed to write contents to temporary file.");
+        }
 
-        $meta = stream_get_meta_data($tmpFile);
-        return $meta['uri'];
+        return $tmpPath;
     }
 
     private function listRemoteFilenames($connection, string $directory): array
@@ -73,20 +73,6 @@ class FtpStorage implements StorageInterface
         if (!$success) {
             throw new StorageException("Filed to send file FTP: {$remotePath}");
         }
-    }
-
-    private function generateUniqueFilename(string $filename, array $existingFiles): string
-    {
-        $base = pathinfo($filename, PATHINFO_FILENAME);
-        $ext = pathinfo($filename, PATHINFO_EXTENSION);
-        $counter = 1;
-        $newName = $filename;
-
-        while (in_array($newName, $existingFiles)) {
-            $newName = sprintf('%s-%d.%s', $base, ++$counter, $ext);
-        }
-
-        return $newName;
     }
 
 
