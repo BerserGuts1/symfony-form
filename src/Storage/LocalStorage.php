@@ -13,15 +13,15 @@ class LocalStorage implements StorageInterface
         $path = rtrim($this->targetDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $filename;
 
         if (!is_dir($this->targetDirectory) && !mkdir($this->targetDirectory, 0775, true)) {
-            throw new StorageException('Nie udało się utworzyć katalogu docelowego: ' . $this->targetDirectory);
+            throw new StorageException("The destination directory could not be created: " . $this->targetDirectory);
         }
 
         if (!is_writable($this->targetDirectory)) {
-            throw new StorageException('Brak uprawnień do zapisu w katalogu: ' . $this->targetDirectory);
+            throw new StorageException("No permissions to write to the directory: " . $this->targetDirectory);
         }
 
         if (file_put_contents($path, $binary) === false) {
-            throw new StorageException('Nie udało się zapisać pliku: ' . $path);
+            throw new StorageException("Failed to save the file: " . $path);
         }
     }
 }

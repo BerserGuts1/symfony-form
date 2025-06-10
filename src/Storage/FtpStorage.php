@@ -2,8 +2,6 @@
 
 namespace JakubOlkowiczRekrutacjaSmartiveapp\Storage;
 
-use JakubOlkowiczRekrutacjaSmartiveapp\Service\ResolveFileConflict;
-
 class FtpStorage implements StorageInterface
 {
     private $fileConflictCommand;
@@ -53,7 +51,7 @@ class FtpStorage implements StorageInterface
     {
         $tmpFile = tmpfile();
         if ($tmpFile === false) {
-            throw new StorageException('Failed to create a temporary file.');
+            throw new StorageException("Failed to create a temporary file.");
         }
 
         fwrite($tmpFile, $binary);

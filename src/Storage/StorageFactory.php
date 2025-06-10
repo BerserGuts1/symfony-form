@@ -12,9 +12,9 @@ class StorageFactory
     public function create(string $type): StorageInterface
     {
         return match ($type) {
-            'ftp' => $this->ftpStorage,
-            'local' => $this->localStorage,
-            default => throw new \InvalidArgumentException("Nieznany typ storage: $type"),
+            "ftp" => $this->ftpStorage,
+            "local" => $this->localStorage,
+            default => throw new \InvalidArgumentException("Unknown type storage: $type"),
         };
     }
 }
